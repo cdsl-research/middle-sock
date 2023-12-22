@@ -35,7 +35,7 @@ impl Route {
     }
 
     fn vec_to_route(v: Vec<String>) -> Route {
-        let iface: String = v[0].to_owned().to_owned();
+        let iface: String = v[0].to_owned();
         let destination: u64 = v[1].parse().unwrap();
         let gateway: u64 = v[2].parse().unwrap();
         let flags: u32 = v[3].parse().unwrap();
