@@ -1,6 +1,7 @@
 use std::{path::Path, fs::File, io::{self, BufReader, BufRead}};
 
 // read /proc/route and parse code
+// TODO: Add algorithm
 
 // Export from /proc/net/route defines
 // ref: https://github.com/torvalds/linux/blob/v6.6/net/ipv4/fib_trie.c#L2976-L3024
