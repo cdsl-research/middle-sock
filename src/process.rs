@@ -1,12 +1,15 @@
 // TODO: add fork/exec code
 
-use std::{io::Result, process::{Command, Stdio}};
+use std::{
+    io::Result,
+    process::{Command, Stdio},
+};
 
 use log::info;
 
 #[derive(Debug)]
 struct ProcessExecutor {
-    command: Command
+    command: Command,
 }
 
 impl ProcessExecutor {
@@ -17,13 +20,15 @@ impl ProcessExecutor {
         for token in tokens.into_iter() {
             cmd_value.arg(token);
         }
-        Self {
-            command: cmd_value
-        }
+        Self { command: cmd_value }
     }
 
     pub fn run(&mut self) -> Result<()> {
-        let child = self.command.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+        let child = self
+            .command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
         let id = child.id();
         info!("spawned child process; id: {}", id);
         Ok(())
