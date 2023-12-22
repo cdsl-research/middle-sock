@@ -3,6 +3,7 @@ use std::{os::unix::net::UnixStream, path::Path, net::UdpSocket};
 const RECEIVER_PORT: i32 = 67;
 const SENDER_PORT: i32 = 68;
 
+#[derive(Debug)]
 struct Socket {
     receiver: UdpSocket,
     sender: UdpSocket,
@@ -10,7 +11,7 @@ struct Socket {
 }
 
 impl Socket {
-    pub fn new<P: AsRef<Path>>(fp: P) -> Result<Socket, std::io::Error> {
+    pub fn new<P: AsRef<Path>>(fp: P) -> Result<Self, std::io::Error> {
         let receiver_sock = UdpSocket::bind(format!("0.0.0.0:{}", RECEIVER_PORT))?;
         let sender_sock = UdpSocket::bind(format!("0.0.0.0:{}", SENDER_PORT))?;
         let domain_sock = UnixStream::connect(fp)?;
