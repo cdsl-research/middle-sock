@@ -1,5 +1,7 @@
 use std::{os::unix::net::UnixStream, path::Path, net::UdpSocket};
 
+// Unix Domain Socket means raw socket (no socket file, probably)
+
 const RECEIVER_PORT: i32 = 67;
 const SENDER_PORT: i32 = 68;
 
