@@ -17,7 +17,7 @@ impl ProcessExecutor {
         let cmd: String = cmd.into();
         let tokens: Vec<_> = cmd.split_whitespace().collect();
         let mut cmd_value = Command::new(tokens[0]);
-        for token in tokens.into_iter() {
+        for token in tokens[1..].into_iter() {
             cmd_value.arg(token);
         }
         Self { command: cmd_value }

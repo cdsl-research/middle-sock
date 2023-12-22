@@ -35,13 +35,10 @@ impl Route {
     fn read_route(path: &Path) -> io::Result<Vec<Self>> {
         let f = File::open(path)?;
         let lines = BufReader::new(f).lines();
-        let values: Vec<Vec<_>> = lines
+        let output: Vec<_> = lines
             .skip(1)
             .filter_map(|v| v.ok())
             .map(|v| v.split("\t").map(str::to_owned).collect())
-            .collect();
-        let output: Vec<_> = values
-            .into_iter()
             .filter_map(|v| Route::vec_to_route(v).ok())
             .collect();
         Ok(output)
