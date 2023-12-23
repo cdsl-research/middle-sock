@@ -1,11 +1,11 @@
 # middle-sock
 
-A software for fowarding and dynamic-transforming DHCP packets in containers, using an unix domain socket between a DHCP server.
+A software for fowarding and dynamic-transforming DHCP packets in containers, using an unix domain socket or raw socket between a DHCP server.
 
 # Usage
 
 ```sh
-middle-sock -c "<command>"
+middle-sock -c "<DHCP server start command>"
 ```
 
 # Build
