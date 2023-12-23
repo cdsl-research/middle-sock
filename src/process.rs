@@ -16,11 +16,11 @@ impl ProcessExecutor {
     pub fn new<T: Into<String>>(cmd: T) -> Self {
         let cmd: String = cmd.into();
         let tokens: Vec<_> = cmd.split_whitespace().collect();
-        let mut cmd_value = Command::new(tokens[0]);
-        for token in tokens[1..].into_iter() {
-            cmd_value.arg(token);
+        let mut builder = Command::new(tokens[0]);
+        if let Some(args) = tokens.get(1..) {
+            builder.args(args);
         }
-        Self { command: cmd_value }
+        Self { command: builder }
     }
 
     pub fn run(&mut self) -> Result<()> {
