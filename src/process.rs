@@ -3,7 +3,7 @@ use std::{
     io,
     os::{
         fd::AsFd,
-        unix::prelude::{AsRawFd, BorrowedFd, OwnedFd},
+        unix::prelude::OwnedFd,
     },
     process::{Command, Stdio},
 };
