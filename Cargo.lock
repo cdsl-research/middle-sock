@@ -462,6 +462,7 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "nix",
  "rtnetlink",
 ]
 

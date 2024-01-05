@@ -1,11 +1,16 @@
-// TODO: add fork/exec code
-
 use std::{
-    io::Result,
+    fs::File,
+    io,
+    os::{
+        fd::AsFd,
+        unix::prelude::{AsRawFd, BorrowedFd, OwnedFd},
+    },
     process::{Command, Stdio},
 };
 
 use log::info;
+use nix::sched::{setns, CloneFlags};
+use rtnetlink::{Error, NetworkNamespace, NETNS_PATH, SELF_NS_PATH};
 
 #[derive(Debug)]
 struct ProcessExecutor {
@@ -23,7 +28,7 @@ impl ProcessExecutor {
         Self { command: builder }
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub fn run(&mut self) -> io::Result<()> {
         let child = self
             .command
             .stdout(Stdio::piped())
@@ -33,4 +38,20 @@ impl ProcessExecutor {
         info!("spawned child process; id: {}", id);
         Ok(())
     }
+}
+
+pub fn get_current_netns() -> io::Result<OwnedFd> {
+    let f = File::open(SELF_NS_PATH)?;
+    f.as_fd().try_clone_to_owned()
+}
+
+async fn add_ns<T: Into<String>>(name: T) -> Result<(), Error> {
+    NetworkNamespace::add(name.into()).await?;
+    Ok(())
+}
+
+pub fn switch_netns<T: Into<String>>(netns_name: T) -> io::Result<()> {
+    let f = File::open(format!("{}/{}", NETNS_PATH, netns_name.into()))?;
+    setns(f.as_fd(), CloneFlags::CLONE_NEWNET)?;
+    Ok(())
 }

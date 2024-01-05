@@ -1,6 +1,4 @@
-use std::{net::UdpSocket, os::unix::net::UnixStream, path::Path, io};
-
-// Unix Domain Socket means raw socket (no socket file, probably)
+use std::{io, net::UdpSocket, os::unix::net::UnixStream, path::Path};
 
 const RECEIVER_PORT: i32 = 67;
 const SENDER_PORT: i32 = 68;
@@ -27,6 +25,10 @@ impl Socket {
     pub fn new_without_domain() -> io::Result<Self> {
         let receiver_sock = UdpSocket::bind(format!("0.0.0.0:{}", RECEIVER_PORT))?;
         let sender_sock = UdpSocket::bind(format!("0.0.0.0:{}", SENDER_PORT))?;
-        Ok(Self { receiver: receiver_sock, sender: sender_sock, domain: None })
+        Ok(Self {
+            receiver: receiver_sock,
+            sender: sender_sock,
+            domain: None,
+        })
     }
 }
