@@ -78,3 +78,18 @@ async fn set_macvlan_to_ns<T: Into<String>>(
     }
     Ok(())
 }
+
+async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
+    let mut links = handle.link().get().match_name(link_name.into()).execute();
+    if let Some(link) = links.try_next().await? {
+        handle
+            .link()
+            .set(link.header.index)
+            .up()
+            .execute()
+            .await?
+    } else {
+        info!("skipped");
+    }
+    Ok(())
+}
