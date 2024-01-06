@@ -133,7 +133,7 @@ impl Route {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct RouteInfo {
     pub destination: Ipv4Addr,
     pub gateway: Ipv4Addr,
