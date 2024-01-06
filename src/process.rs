@@ -1,10 +1,7 @@
 use std::{
     fs::File,
     io,
-    os::{
-        fd::AsFd,
-        unix::prelude::OwnedFd,
-    },
+    os::{fd::AsFd, unix::prelude::OwnedFd},
     process::{Command, Stdio},
 };
 
