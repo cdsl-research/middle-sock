@@ -2,15 +2,16 @@ use std::{
     fs::File,
     io,
     os::{fd::AsFd, unix::prelude::OwnedFd},
-    process::{Command, Stdio},
+    process::Stdio,
 };
 
 use log::info;
 use nix::sched::{setns, CloneFlags};
-use rtnetlink::{Error, NetworkNamespace, NETNS_PATH, SELF_NS_PATH};
+use rtnetlink::{NETNS_PATH, SELF_NS_PATH};
+use tokio::process::Command;
 
 #[derive(Debug)]
-struct ProcessExecutor {
+pub struct ProcessExecutor {
     command: Command,
 }
 
@@ -31,8 +32,11 @@ impl ProcessExecutor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
-        let id = child.id();
-        info!("spawned child process; id: {}", id);
+        if let Some(id) = child.id() {
+            info!("spawned child process; id: {}", id);
+        } else {
+            info!("The process has been polled to completion.");
+        }
         Ok(())
     }
 }
@@ -40,11 +44,6 @@ impl ProcessExecutor {
 pub fn get_current_netns() -> io::Result<OwnedFd> {
     let f = File::open(SELF_NS_PATH)?;
     f.as_fd().try_clone_to_owned()
-}
-
-async fn add_ns<T: Into<String>>(name: T) -> Result<(), Error> {
-    NetworkNamespace::add(name.into()).await?;
-    Ok(())
 }
 
 pub fn switch_netns<T: Into<String>>(netns_name: T) -> io::Result<()> {

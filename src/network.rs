@@ -7,9 +7,9 @@ use std::{
 
 use futures::TryStreamExt;
 use log::info;
-use rtnetlink::{Error, Handle, NETNS_PATH};
+use rtnetlink::{Error, Handle, NETNS_PATH, NetworkNamespace};
 
-async fn add_route<T: Into<Ipv4Addr>>(
+pub async fn add_route<T: Into<Ipv4Addr>>(
     dest: T,
     prefix: u8,
     gateway: T,
@@ -26,7 +26,12 @@ async fn add_route<T: Into<Ipv4Addr>>(
     Ok(())
 }
 
-async fn create_macvlan_with_address<T: Into<String>, U: Into<IpAddr>>(
+pub async fn add_ns<T: Into<String>>(name: T) -> Result<(), Error> {
+    NetworkNamespace::add(name.into()).await?;
+    Ok(())
+}
+
+pub async fn create_macvlan_with_address<T: Into<String>, U: Into<IpAddr>>(
     link_name: T,
     name: T,
     ip: U,
@@ -59,7 +64,7 @@ async fn create_macvlan_with_address<T: Into<String>, U: Into<IpAddr>>(
     Ok(())
 }
 
-async fn set_macvlan_to_ns<T: Into<String>>(
+pub async fn set_macvlan_to_ns<T: Into<String>>(
     link_name: T,
     ns_name: T,
     handle: &Handle,
@@ -79,7 +84,7 @@ async fn set_macvlan_to_ns<T: Into<String>>(
     Ok(())
 }
 
-async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
+pub async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
     let mut links = handle.link().get().match_name(link_name.into()).execute();
     if let Some(link) = links.try_next().await? {
         handle.link().set(link.header.index).up().execute().await?

@@ -17,7 +17,7 @@ const SEG_4: u64 = 0x000000FF;
 // Export from /proc/net/route defines
 // ref: https://github.com/torvalds/linux/blob/v6.6/net/ipv4/fib_trie.c#L2976-L3024
 #[derive(Debug, Clone)]
-struct Route {
+pub struct Route {
     iface: String,    // %s
     destination: u64, // %08X
     gateway: u64,     // %08X
@@ -134,7 +134,7 @@ impl Route {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct RouteInfo {
+pub struct RouteInfo {
     pub destination: Ipv4Addr,
     pub gateway: Ipv4Addr,
     pub mask: Ipv4Addr,
