@@ -31,27 +31,25 @@ pub async fn add_ns<T: Into<String>>(name: T) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn create_macvlan_with_address<T: Into<String>, U: Into<IpAddr>>(
+pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr>>(
     link_name: T,
-    name: T,
+    new_link_name: T,
     ip: U,
     prefix: u8,
     handle: &Handle,
 ) -> Result<(), Error> {
-    let link_name: String = link_name.into();
-    let name: String = name.into();
-    let mut links = handle.link().get().match_name(link_name.clone()).execute();
+    let mut links = handle.link().get().match_name(link_name.clone().into()).execute();
     if let Some(link) = links.try_next().await? {
         let request = handle.link().add().macvlan(
-            name.clone(),
+            new_link_name.clone().into(),
             link.header.index,
             4u32, // bridge mode
         );
         request.execute().await?;
     } else {
-        info!("skipped `create_macvlan` due to no {:?}", link_name)
+        info!("skipped `create_macvlan` due to no {:?}", link_name.clone().into())
     }
-    let mut links = handle.link().get().match_name(name).execute();
+    let mut links = handle.link().get().match_name(new_link_name.clone().into()).execute();
     if let Some(link) = links.try_next().await? {
         handle
             .address()
@@ -77,7 +75,7 @@ pub async fn set_macvlan_to_ns<T: Into<String>>(
             .set(link.header.index)
             .setns_by_fd(f.as_raw_fd())
             .execute()
-            .await?
+            .await?;
     } else {
         info!("skipped");
     }

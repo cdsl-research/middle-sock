@@ -1,7 +1,9 @@
-use std::{io, path::Path};
+use std::{io, path::Path, env};
 
 use dhcproto::v4::{CLIENT_PORT, SERVER_PORT};
-use tokio::net::{UdpSocket, UnixStream};
+
+use log::{info, debug};
+use tokio::{net::{UdpSocket, UnixStream}, sync::oneshot};
 
 #[derive(Debug)]
 pub struct Socket {
@@ -30,5 +32,23 @@ impl Socket {
             sender: sender_sock,
             domain: None,
         })
+    }
+
+    pub async fn listen(&self) -> io::Result<()> {
+        let server_host = env::var("SERVER_HOST").expect("no data in `SERVER_HOST`");
+        debug!("server_host: {}", &server_host);
+        // receiver to sender channel
+        let (tx1, rx1) = oneshot::channel();
+        // sender to receiver channel
+        let (tx2, rx2) = oneshot::channel();
+        tokio::spawn(async move {
+            info!("spawning receiver")
+            // receiver process
+        }).await?;
+        tokio::spawn(async move {
+            info!("spawning sender")
+            // sender process
+        }).await?;
+        Ok(())
     }
 }

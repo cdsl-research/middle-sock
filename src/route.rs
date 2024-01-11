@@ -98,12 +98,9 @@ impl Route {
             } else {
                 let mut mask = self.mask;
                 let mut segment: u8 = 0;
-                loop {
+                while mask != 0 {
                     segment += (mask & 1) as u8;
                     mask >>= 1;
-                    if mask == 0 {
-                        break;
-                    }
                 }
                 if (self.destination >> segment) == 0 {
                     let mut route_info = if let Some(v) = map.get(&self.iface) {
