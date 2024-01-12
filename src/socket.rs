@@ -5,6 +5,8 @@ use dhcproto::v4::{CLIENT_PORT, SERVER_PORT};
 use log::{info, debug};
 use tokio::{net::{UdpSocket, UnixStream}, sync::oneshot};
 
+use crate::packet::DHCPMessage;
+
 #[derive(Debug)]
 pub struct Socket {
     receiver: UdpSocket,
@@ -38,9 +40,9 @@ impl Socket {
         let server_host = env::var("SERVER_HOST").expect("no data in `SERVER_HOST`");
         debug!("server_host: {}", &server_host);
         // receiver to sender channel
-        let (tx1, rx1) = oneshot::channel();
+        let (tx1, rx1) = oneshot::channel::<DHCPMessage>();
         // sender to receiver channel
-        let (tx2, rx2) = oneshot::channel();
+        let (tx2, rx2) = oneshot::channel::<DHCPMessage>();
         tokio::spawn(async move {
             info!("spawning receiver")
             // receiver process
