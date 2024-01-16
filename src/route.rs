@@ -137,6 +137,12 @@ pub struct RouteInfo {
     pub mask: Ipv4Addr,
 }
 
+impl RouteInfo {
+    pub fn is_full(&self) -> bool {
+        !(self.destination.is_unspecified() || self.gateway.is_unspecified() || self.mask.is_unspecified())
+    }
+}
+
 impl Default for RouteInfo {
     fn default() -> Self {
         let default_v4 = Ipv4Addr::new(0, 0, 0, 0);

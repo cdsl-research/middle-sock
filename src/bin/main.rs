@@ -45,6 +45,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     for (k, v) in route_info.iter() {
+        if !v.is_full() {
+            continue;
+        }
         setup_ns(link_name, k, ns_name, ip, v, &handle).await?
     }
 
