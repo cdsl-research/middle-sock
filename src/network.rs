@@ -78,7 +78,7 @@ pub async fn set_macvlan_to_ns<T: Into<String>>(
     ns_name: T,
     handle: &Handle,
 ) -> Result<(), Box<dyn error::Error>> {
-    let f = File::open(format!("{}/{}", NETNS_PATH, ns_name.into()))?;
+    let f = File::open(format!("{}{}", NETNS_PATH, ns_name.into()))?;
     let mut links = handle.link().get().match_name(link_name.into()).execute();
     if let Some(link) = links.try_next().await? {
         handle

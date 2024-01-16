@@ -17,8 +17,9 @@ pub fn init_routeinfo_map() -> HashMap<String, RouteInfo> {
 
 mod network;
 
+// TODO: add dummy_link_name for routing uh...
 pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
-    link_name: T,
+    base_link_name: T,
     new_link_name: T,
     ns_name: T,
     ip: U,
@@ -27,8 +28,9 @@ pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
 ) -> Result<(), Box<dyn error::Error>> {
     let prefix = mask_to_prefix(info.mask);
     add_ns(ns_name.clone()).await?;
+    // TODO: add dummy link interface in network.rs
     create_macvlan_with_address(
-        link_name.clone(),
+        base_link_name.clone(),
         new_link_name.clone(),
         ip.clone().into(),
         prefix,

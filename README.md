@@ -12,7 +12,7 @@ middle-sock -c "<DHCP server start command>"
 ## Run with Docker
 
 ```sh
-cat /proc/net/route > <file> && docker run --cap-add SYS_ADMIN --security-opt apparmor=unconfined --security-opt seccomp=unconfined -v <file>:/mnt/route:ro -e SERVER_HOST=<host_ip> -p 67:67/udp --name <container_name> -itd middle-sock
+cat /proc/net/route > <file> && docker run --cap-add SYS_ADMIN --cap-add NET_ADMIN --security-opt apparmor=unconfined --security-opt seccomp=unconfined -v <file>:/mnt/route:ro -e SERVER_HOST=<host_ip> -p 67:67/udp --name <container_name> -itd middle-sock
 ```
 
 (I would update this with examples.)
