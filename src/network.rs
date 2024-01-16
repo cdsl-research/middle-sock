@@ -7,7 +7,7 @@ use std::{
 
 use futures::TryStreamExt;
 use log::info;
-use rtnetlink::{Error, Handle, NETNS_PATH, NetworkNamespace};
+use rtnetlink::{Error, Handle, NetworkNamespace, NETNS_PATH};
 
 pub async fn add_route<T: Into<Ipv4Addr>>(
     dest: T,
@@ -38,7 +38,11 @@ pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr
     prefix: u8,
     handle: &Handle,
 ) -> Result<(), Error> {
-    let mut links = handle.link().get().match_name(link_name.clone().into()).execute();
+    let mut links = handle
+        .link()
+        .get()
+        .match_name(link_name.clone().into())
+        .execute();
     if let Some(link) = links.try_next().await? {
         let request = handle.link().add().macvlan(
             new_link_name.clone().into(),
@@ -47,9 +51,16 @@ pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr
         );
         request.execute().await?;
     } else {
-        info!("skipped `create_macvlan` due to no {:?}", link_name.clone().into())
+        info!(
+            "skipped `create_macvlan` due to no {:?}",
+            link_name.clone().into()
+        )
     }
-    let mut links = handle.link().get().match_name(new_link_name.clone().into()).execute();
+    let mut links = handle
+        .link()
+        .get()
+        .match_name(new_link_name.clone().into())
+        .execute();
     if let Some(link) = links.try_next().await? {
         handle
             .address()

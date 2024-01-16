@@ -1,7 +1,7 @@
-use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, os::unix::prelude::AsFd};
+use std::{collections::HashMap, error, io, net::Ipv4Addr, os::unix::prelude::AsFd, path::Path};
 
 use network::{add_ns, add_route, create_macvlan_with_address, set_link_up, set_macvlan_to_ns};
-use process::{get_current_netns, switch_netns, ProcessExecutor, switch_netns_fd};
+use process::{get_current_netns, switch_netns, switch_netns_fd, ProcessExecutor};
 use route::{Route, RouteInfo};
 use rtnetlink::Handle;
 
@@ -36,7 +36,7 @@ pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
     )
     .await?;
     set_link_up(new_link_name.clone(), handle).await?;
-    set_macvlan_to_ns(link_name.clone(), ns_name.clone(), handle).await?;
+    set_macvlan_to_ns(new_link_name.clone(), ns_name.clone(), handle).await?;
     add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
 }

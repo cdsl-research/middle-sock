@@ -1,9 +1,15 @@
-use std::{io, path::Path, env, sync::Arc};
+use std::{io, net::SocketAddr, path::Path, sync::Arc};
 
-use dhcproto::v4::{CLIENT_PORT, SERVER_PORT};
+use dhcproto::{
+    v4::{Message, CLIENT_PORT, SERVER_PORT},
+    Decodable, Decoder, Encodable, Encoder,
+};
 
-use log::{info, debug};
-use tokio::{net::{UdpSocket, UnixStream}, sync::oneshot};
+use log::{debug, info, warn};
+use tokio::{
+    net::{UdpSocket, UnixStream},
+    sync::mpsc,
+};
 
 use crate::packet::DHCPMessage;
 
@@ -36,31 +42,49 @@ impl Socket {
         })
     }
 
-    pub async fn listen(&self) -> io::Result<()> {
-        let server_host = env::var("SERVER_HOST").expect("no data in `SERVER_HOST`");
+    pub async fn listen(&self, server_host: SocketAddr) -> io::Result<()> {
+        let runtime_ip = String::from("172.17.0.1");
+        let (tx, mut rx) = mpsc::channel::<(DHCPMessage, SocketAddr)>(1024);
         debug!("server_host: {}", &server_host);
-        // receiver to sender channel
-        let (tx1, rx1) = oneshot::channel::<DHCPMessage>();
-        // sender to receiver channel
-        let (tx2, rx2) = oneshot::channel::<DHCPMessage>();
         let receiver_sock = Arc::clone(&self.receiver);
         let sender_sock = Arc::clone(&self.sender);
-        tokio::spawn(async move {
-            info!("spawning receiver");
-            // receiver process
-        }).await?;
         if let Some(s) = &self.domain {
             let domain_sock = Arc::clone(s);
             tokio::spawn(async move {
                 info!("spawning sender (unix domain sock)");
                 // sender process w/ unix domain sock
-            }).await?;
+            })
+            .await?;
         } else {
             tokio::spawn(async move {
                 info!("spawning sender (udp)");
                 // sender process w/ udp
-            }).await?;
+                while let Some((msg, addr)) = rx.recv().await {
+                    if addr.ip().to_string() == runtime_ip {
+                        let mut buf = Vec::new();
+                        let mut e = Encoder::new(&mut buf);
+                        let _ = msg.raw().encode(&mut e);
+                        if let Err(_) = sender_sock.send_to(&buf, server_host).await {
+                            warn!("could not send to server_host")
+                        }
+                    } else {
+                    }
+                }
+            })
+            .await?;
         }
-        Ok(())
+        info!("spawning receiver");
+        let mut buf = [0; 1024];
+        loop {
+            let (len, addr) = receiver_sock.recv_from(&mut buf).await?;
+            let msg = Message::decode(&mut Decoder::new(&buf[..len]));
+            if let Ok(msg) = msg {
+                if let Err(_) = tx.send((msg.into(), addr)).await {
+                    warn!("failed sending");
+                }
+            } else {
+                warn!("failed decode msg")
+            }
+        }
     }
 }
