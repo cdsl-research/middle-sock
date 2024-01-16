@@ -44,7 +44,7 @@ impl Route {
         let output: Vec<_> = lines
             .skip(1)
             .filter_map(|v| v.ok())
-            .map(|v| v.split("\t").map(str::to_owned).collect())
+            .map(|v| v.trim().split("\t").map(str::to_owned).collect())
             .filter_map(|v| Route::vec_to_route(v).ok())
             .collect();
         Ok(output)
