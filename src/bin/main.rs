@@ -15,6 +15,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     let server_host = env::var("SERVER_HOST")
         .expect("no data in `SERVER_HOST`")
         .parse::<SocketAddr>()

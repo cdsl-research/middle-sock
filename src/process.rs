@@ -50,7 +50,7 @@ pub fn get_current_netns() -> io::Result<OwnedFd> {
 }
 
 pub fn switch_netns<T: Into<String>>(netns_name: T) -> io::Result<()> {
-    let f = File::open(format!("{}/{}", NETNS_PATH, netns_name.into()))?;
+    let f = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
     setns(f.as_fd(), CloneFlags::CLONE_NEWNET)?;
     Ok(())
 }
