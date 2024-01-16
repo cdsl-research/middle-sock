@@ -52,13 +52,13 @@ impl Route {
 
     fn vec_to_route(v: Vec<String>) -> Result<Route, ParseIntError> {
         let iface: String = v[0].to_owned();
-        let destination: u64 = v[1].parse()?;
-        let gateway: u64 = v[2].parse()?;
-        let flags: u32 = v[3].parse()?;
+        let destination: u64 = u64::from_str_radix(&v[1], 16)?;
+        let gateway: u64 = u64::from_str_radix(&v[2], 16)?;
+        let flags: u32 = u32::from_str_radix(&v[3], 16)?;
         let ref_cnt: i32 = v[4].parse()?;
         let use_field: u32 = v[5].parse()?;
         let metric: i32 = v[6].parse()?;
-        let mask: u64 = v[7].parse()?;
+        let mask: u64 = u64::from_str_radix(&v[2], 16)?;
         let mtu: i32 = v[8].parse()?;
         let window: u32 = v[9].parse()?;
         let irtt: u32 = v[10].parse()?;
