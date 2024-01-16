@@ -58,7 +58,7 @@ impl Route {
         let ref_cnt: i32 = v[4].parse()?;
         let use_field: u32 = v[5].parse()?;
         let metric: i32 = v[6].parse()?;
-        let mask: u64 = u64::from_str_radix(&v[2], 16)?;
+        let mask: u64 = u64::from_str_radix(&v[7], 16)?;
         let mtu: i32 = v[8].parse()?;
         let window: u32 = v[9].parse()?;
         let irtt: u32 = v[10].parse()?;
