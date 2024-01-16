@@ -79,8 +79,8 @@ impl Route {
     }
 
     pub fn parse_network(&self, map: &mut HashMap<String, RouteInfo>) -> io::Result<()> {
-        if self.flags & RTF_UP == RTF_UP {
-            if self.gateway != 0 && self.flags & RTF_GATEWAY == RTF_GATEWAY {
+        if self.flags & RTF_UP != 0 {
+            if self.gateway != 0 && (self.flags & RTF_GATEWAY) != 0 {
                 let mut route_info = if let Some(v) = map.get(&self.iface) {
                     *v
                 } else {
