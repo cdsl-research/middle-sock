@@ -83,8 +83,8 @@ pub async fn run_process<T: Into<String> + Clone>(
     let handle = Arc::new(handle.clone());
     let h = Arc::clone(&handle);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
+    let handle = TokioHandle::current();
     thread::spawn(move || {
-        let handle = TokioHandle::current();
         handle.block_on(async move {
             if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 tokio::spawn(async move {
