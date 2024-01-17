@@ -13,7 +13,7 @@ futures = "0.3.30"
 log = "0.4.20"
 nix = "0.27.1"
 rtnetlink = "0.14.0"
-tokio = { version = "1.35.1", features = ["macros", "rt", "rt-multi-thread", "net", "sync"] }
+tokio = { version = "1.35.1", features = ["macros", "rt", "rt-multi-thread", "net", "process", "sync"] }
 
 [[bin]]
 name = "middle-sock"

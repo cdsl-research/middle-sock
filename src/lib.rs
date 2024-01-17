@@ -1,10 +1,20 @@
-use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File, thread, sync::Arc};
+use std::{
+    collections::HashMap,
+    error,
+    fs::File,
+    io,
+    net::Ipv4Addr,
+    path::Path,
+    sync::Arc,
+    thread::{self},
+};
 
 use network::{add_address, add_ns, create_veth_pair, set_link_up, set_veth_to_ns};
-use nix::sched::{CloneFlags, setns};
+use nix::sched::{setns, CloneFlags};
 use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
 use rtnetlink::{Handle, NETNS_PATH};
+use tokio::runtime::Handle as TokioHandle;
 
 mod route;
 
@@ -64,24 +74,31 @@ fn mask_to_prefix(mask: Ipv4Addr) -> u8 {
 mod packet;
 mod process;
 
-pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T, handle: &Handle) -> io::Result<()> {
+pub async fn run_process<T: Into<String> + Clone>(
+    cmd: T,
+    netns_name: T,
+    handle: &Handle,
+) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
     let handle = Arc::new(handle.clone());
     let h = Arc::clone(&handle);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
     thread::spawn(move || {
-        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-            tokio::spawn(async move {
-                let _ = set_link_up("lo", &h).await;
-            });
-            if executor.run().is_ok() {
-                loop {}
+        let handle = TokioHandle::current();
+        handle.block_on(async move {
+            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+                tokio::spawn(async move {
+                    let _ = set_link_up("lo", &h).await;
+                });
+                if executor.run().await.is_ok() {
+                    loop {}
+                } else {
+                    panic!("panic on executor");
+                };
             } else {
-                panic!("panic on executor");
-            };
-        } else {
-            panic!("panic on setns");
-        }
+                panic!("panic on setns");
+            }
+        })
     });
     Ok(())
 }

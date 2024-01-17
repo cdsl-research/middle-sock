@@ -1,9 +1,10 @@
 use std::{
     io,
-    process::{Stdio, Command},
+    process::Stdio,
 };
 
-use log::info;
+use tokio::process::Command;
+use log::{info, warn};
 
 #[derive(Debug)]
 pub struct ProcessExecutor {
@@ -22,13 +23,17 @@ impl ProcessExecutor {
         Self { command: builder }
     }
 
-    pub fn run(&mut self) -> io::Result<()> {
+    pub async fn run(&mut self) -> io::Result<()> {
         let child = self
             .command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
-        info!("spawned child process; id: {}", child.id());
+        if let Some(id) = child.id() {
+            info!("spawned child process; id: {}", id);
+        } else {
+            warn!("The process has been polled to completion.");
+        }
         Ok(())
     }
 }
