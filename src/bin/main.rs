@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cmd = cli.command;
 
-    run_process(cmd, ns_name.to_string()).await?;
+    run_process(cmd, ns_name.to_string())?;
 
     let sock = Socket::new_without_domain().await?;
     sock.listen(server_host).await?;

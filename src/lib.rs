@@ -1,10 +1,10 @@
-use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File};
+use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File, thread};
 
 use network::{add_address, add_ns, create_veth_pair, set_link_up, set_veth_to_ns};
 use nix::sched::{CloneFlags, setns};
 use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
-use rtnetlink::{Handle, SELF_NS_PATH, NETNS_PATH};
+use rtnetlink::{Handle, NETNS_PATH};
 
 mod route;
 
@@ -64,13 +64,15 @@ fn mask_to_prefix(mask: Ipv4Addr) -> u8 {
 mod packet;
 mod process;
 
-pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
+pub fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
-    let current_ns = File::open(SELF_NS_PATH)?;
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
-    setns(new_ns, CloneFlags::CLONE_NEWNET)?;
-    executor.run()?;
-    setns(current_ns, CloneFlags::CLONE_NEWNET)?;
+    let t = thread::spawn(move || {
+        setns(new_ns, CloneFlags::CLONE_NEWNET)?;
+        executor.run()?;
+        Ok::<(), io::Error>(())
+    });
+    t.join().expect_err("could not join handle");
     Ok(())
 }
 
