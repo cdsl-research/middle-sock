@@ -31,9 +31,22 @@ pub async fn add_ns<T: Into<String>>(name: T) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr>>(
+pub async fn create_veth_pair<T: Into<String> + Clone>(
+    link_name_1: T,
+    link_name_2: T,
+    handle: &Handle,
+) -> Result<(), Error> {
+    handle
+        .link()
+        .add()
+        .veth(link_name_1.clone().into(), link_name_2.clone().into())
+        .execute()
+        .await?;
+    Ok(())
+}
+
+pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr>>(
     link_name: T,
-    new_link_name: T,
     ip: U,
     prefix: u8,
     handle: &Handle,
@@ -42,24 +55,6 @@ pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr
         .link()
         .get()
         .match_name(link_name.clone().into())
-        .execute();
-    if let Some(link) = links.try_next().await? {
-        let request = handle.link().add().macvlan(
-            new_link_name.clone().into(),
-            link.header.index,
-            4u32, // bridge mode
-        );
-        request.execute().await?;
-    } else {
-        info!(
-            "skipped `create_macvlan` due to no {:?}",
-            link_name.clone().into()
-        )
-    }
-    let mut links = handle
-        .link()
-        .get()
-        .match_name(new_link_name.clone().into())
         .execute();
     if let Some(link) = links.try_next().await? {
         handle
@@ -73,7 +68,7 @@ pub async fn create_macvlan_with_address<T: Into<String> + Clone, U: Into<IpAddr
     Ok(())
 }
 
-pub async fn set_macvlan_to_ns<T: Into<String>>(
+pub async fn set_veth_to_ns<T: Into<String>>(
     link_name: T,
     ns_name: T,
     handle: &Handle,

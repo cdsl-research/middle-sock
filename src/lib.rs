@@ -1,8 +1,8 @@
 use std::{collections::HashMap, error, io, net::Ipv4Addr, os::unix::prelude::AsFd, path::Path};
 
-use network::{add_ns, add_route, create_macvlan_with_address, set_link_up, set_macvlan_to_ns};
+use network::{add_address, add_ns, add_route, create_veth_pair, set_link_up, set_veth_to_ns};
 use process::{get_current_netns, switch_netns, switch_netns_fd, ProcessExecutor};
-use route::{Route, RouteInfo};
+use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
 use rtnetlink::Handle;
 
 mod route;
@@ -17,28 +17,34 @@ pub fn init_routeinfo_map() -> HashMap<String, RouteInfo> {
 
 mod network;
 
-// TODO: add dummy_link_name for routing uh...
 pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
-    base_link_name: T,
-    new_link_name: T,
+    link_name_new: T,
+    link_name_host: T,
     ns_name: T,
     ip: U,
     info: &RouteInfo,
     handle: &Handle,
 ) -> Result<(), Box<dyn error::Error>> {
     let prefix = mask_to_prefix(info.mask);
+    let prefix_rpos = 32 - prefix;
+    let ip_octets: [u8; 4] = ip.clone().into().octets();
+    let ip_octets_3 = ip_octets[3];
+    let ip_to_u64: u64 =
+        (ip_octets[0] << 24 + ip_octets[1] << 16 + ip_octets[2] << 8 + ip_octets[3]) as u64;
+    let ip_range_fixed: u64 = (ip_to_u64 << prefix_rpos) >> prefix_rpos + ip_octets_3;
+    let peer_ip = Ipv4Addr::new(
+        (ip_range_fixed & SEG_4) as u8,
+        ((ip_range_fixed & SEG_3) >> 8) as u8,
+        ((ip_range_fixed & SEG_2) >> 16) as u8,
+        ((ip_range_fixed & SEG_1) >> 24) as u8,
+    );
     add_ns(ns_name.clone()).await?;
-    // TODO: add dummy link interface in network.rs
-    create_macvlan_with_address(
-        base_link_name.clone(),
-        new_link_name.clone(),
-        ip.clone().into(),
-        prefix,
-        handle,
-    )
-    .await?;
-    set_link_up(new_link_name.clone(), handle).await?;
-    set_macvlan_to_ns(new_link_name.clone(), ns_name.clone(), handle).await?;
+    create_veth_pair(link_name_new.clone(), link_name_host.clone(), handle).await?;
+    add_address(link_name_new.clone(), peer_ip, prefix, handle).await?;
+    add_address(link_name_host.clone(), ip.clone().into(), prefix, handle).await?;
+    set_link_up(link_name_new.clone(), handle).await?;
+    set_link_up(link_name_host.clone(), handle).await?;
+    set_veth_to_ns(link_name_host.clone(), ns_name.clone(), handle).await?;
     add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
 }

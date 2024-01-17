@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(connection);
 
     let ns_name = "dhcp";
-    let link_name = "eth0";
+    let link_name = "veth0";
 
     let ip = match server_host.ip() {
         IpAddr::V4(v) => v,

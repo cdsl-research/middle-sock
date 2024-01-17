@@ -9,10 +9,10 @@ use std::{
 
 const RTF_UP: u32 = 0x0001;
 const RTF_GATEWAY: u32 = 0x0002;
-const SEG_1: u64 = 0xFF000000;
-const SEG_2: u64 = 0x00FF0000;
-const SEG_3: u64 = 0x0000FF00;
-const SEG_4: u64 = 0x000000FF;
+pub const SEG_1: u64 = 0xFF000000;
+pub const SEG_2: u64 = 0x00FF0000;
+pub const SEG_3: u64 = 0x0000FF00;
+pub const SEG_4: u64 = 0x000000FF;
 
 // Export from /proc/net/route defines
 // ref: https://github.com/torvalds/linux/blob/v6.6/net/ipv4/fib_trie.c#L2976-L3024
@@ -139,7 +139,9 @@ pub struct RouteInfo {
 
 impl RouteInfo {
     pub fn is_full(&self) -> bool {
-        !(self.destination.is_unspecified() || self.gateway.is_unspecified() || self.mask.is_unspecified())
+        !(self.destination.is_unspecified()
+            || self.gateway.is_unspecified()
+            || self.mask.is_unspecified())
     }
 }
 
