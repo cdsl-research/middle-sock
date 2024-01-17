@@ -13,7 +13,8 @@ pub struct ProcessExecutor {
 impl ProcessExecutor {
     pub fn new<T: Into<String>>(cmd: T) -> Self {
         let cmd: String = cmd.into();
-        let tokens: Vec<_> = cmd.split_whitespace().collect();
+        let replaced_string = cmd.replace("'", "");
+        let tokens: Vec<_> = replaced_string.split_whitespace().collect();
         let mut builder = Command::new(tokens[0]);
         if let Some(args) = tokens.get(1..) {
             builder.args(args);
