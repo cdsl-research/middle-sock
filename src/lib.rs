@@ -44,10 +44,10 @@ pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
         (ip_octets[0] << 24 + ip_octets[1] << 16 + ip_octets[2] << 8 + ip_octets[3]) as u64;
     let ip_range_fixed: u64 = (ip_to_u64 << prefix_rpos) >> prefix_rpos + ip_octets_3;
     let peer_ip = Ipv4Addr::new(
-        (ip_range_fixed & SEG_4) as u8,
-        ((ip_range_fixed & SEG_3) >> 8) as u8,
-        ((ip_range_fixed & SEG_2) >> 16) as u8,
         ((ip_range_fixed & SEG_1) >> 24) as u8,
+        ((ip_range_fixed & SEG_2) >> 16) as u8,
+        ((ip_range_fixed & SEG_3) >> 8) as u8,
+        (ip_range_fixed & SEG_4) as u8,
     );
     add_ns(ns_name.clone()).await?;
     create_veth_pair(link_name_new.clone(), link_name_host.clone(), handle).await?;
