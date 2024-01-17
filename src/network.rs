@@ -47,7 +47,7 @@ pub async fn create_veth_pair<T: Into<String> + Clone>(
     Ok(())
 }
 
-pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr>>(
+pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr> + Clone>(
     link_name: T,
     ip: U,
     prefix: u8,
@@ -58,15 +58,15 @@ pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr>>(
         .get()
         .match_name(link_name.clone().into())
         .execute();
-    if let Some(link) = links.try_next().await? {
+    while let Some(link) = links.try_next().await? {
+        debug!("link (add_address): {:?}", link);
         handle
             .address()
-            .add(link.header.index, ip.into(), prefix)
+            .add(link.header.index, ip.clone().into(), prefix)
             .execute()
             .await?
-    } else {
-        info!("skipped");
     }
+
     Ok(())
 }
 
@@ -125,11 +125,9 @@ pub async fn set_veth_to_ns<T: Into<String>>(
 
 pub async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
     let mut links = handle.link().get().match_name(link_name.into()).execute();
-    if let Some(link) = links.try_next().await? {
+    while let Some(link) = links.try_next().await? {
         debug!("link (set_link_up) {:?}", link);
         handle.link().set(link.header.index).up().execute().await?
-    } else {
-        info!("skipped");
     }
     Ok(())
 }
