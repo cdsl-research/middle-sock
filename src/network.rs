@@ -126,7 +126,7 @@ pub async fn set_veth_to_ns<T: Into<String>>(
 pub async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
     let mut links = handle.link().get().match_name(link_name.into()).execute();
     if let Some(link) = links.try_next().await? {
-        debug!("link (set_link_up) {:#?}", link);
+        debug!("link (set_link_up) {:?}", link);
         handle.link().set(link.header.index).up().execute().await?
     } else {
         info!("skipped");
