@@ -5,16 +5,17 @@ use std::{
     io,
     net::Ipv4Addr,
     path::Path,
-    sync::Arc,
     thread::{self},
 };
 
-use network::{add_address, add_ns, create_veth_pair, set_link_up, set_veth_to_ns};
+use network::{
+    add_address, add_address_with_ns, add_ns, create_veth_pair, set_link_up, set_link_up_with_ns,
+    set_veth_to_ns,
+};
 use nix::sched::{setns, CloneFlags};
 use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
 use rtnetlink::{Handle, NETNS_PATH};
-use tokio::runtime::Handle as TokioHandle;
 
 mod route;
 
@@ -28,7 +29,7 @@ pub fn init_routeinfo_map() -> HashMap<String, RouteInfo> {
 
 mod network;
 
-pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
+pub async fn setup_ns<'a, T: Into<String> + Clone + Send + 'a, U: Into<Ipv4Addr> + Clone + Send>(
     link_name_new: T,
     link_name_host: T,
     ns_name: T,
@@ -51,11 +52,18 @@ pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
     );
     add_ns(ns_name.clone()).await?;
     create_veth_pair(link_name_new.clone(), link_name_host.clone(), handle).await?;
-    add_address(link_name_new.clone(), peer_ip, prefix, handle).await?;
-    add_address(link_name_host.clone(), ip.clone().into(), prefix, handle).await?;
-    set_link_up(link_name_new.clone(), handle).await?;
-    set_link_up(link_name_host.clone(), handle).await?;
     set_veth_to_ns(link_name_host.clone(), ns_name.clone(), handle).await?;
+    add_address(link_name_new.clone(), peer_ip, prefix, handle).await?;
+    add_address_with_ns(
+        link_name_host.clone(),
+        ip.clone().into(),
+        prefix,
+        handle,
+        ns_name.clone(),
+    )
+    .await?;
+    set_link_up(link_name_new.clone(), handle).await?;
+    set_link_up_with_ns(link_name_host.clone(), handle, ns_name.clone()).await?;
     // add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
 }
@@ -74,31 +82,20 @@ fn mask_to_prefix(mask: Ipv4Addr) -> u8 {
 mod packet;
 mod process;
 
-pub async fn run_process<T: Into<String> + Clone>(
-    cmd: T,
-    netns_name: T,
-    handle: &Handle,
-) -> io::Result<()> {
+pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
-    let handle = Arc::new(handle.clone());
-    let h = Arc::clone(&handle);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
-    let handle = TokioHandle::current();
+
     thread::spawn(move || {
-        handle.block_on(async move {
-            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-                tokio::spawn(async move {
-                    let _ = set_link_up("lo", &h).await;
-                });
-                if executor.run().await.is_ok() {
-                    loop {}
-                } else {
-                    panic!("panic on executor");
-                };
+        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            if executor.run().is_ok() {
+                loop {}
             } else {
-                panic!("panic on setns");
-            }
-        })
+                panic!("panic on executor");
+            };
+        } else {
+            panic!("panic on setns");
+        }
     });
     Ok(())
 }
