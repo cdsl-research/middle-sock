@@ -99,7 +99,7 @@ pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::
     });
 
     t.join().unwrap();
-    
+
     Ok(())
 }
 

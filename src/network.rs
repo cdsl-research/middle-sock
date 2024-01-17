@@ -2,11 +2,13 @@ use std::{
     error,
     fs::File,
     net::{IpAddr, Ipv4Addr},
-    os::unix::prelude::AsRawFd, thread, sync::Arc,
+    os::unix::prelude::AsRawFd,
+    sync::Arc,
+    thread,
 };
 
 use futures::TryStreamExt;
-use log::{info, debug};
+use log::{debug, info};
 use nix::sched::{setns, CloneFlags};
 use rtnetlink::{Error, Handle, NetworkNamespace, NETNS_PATH};
 use tokio::runtime::Handle as TokioHandle;
@@ -70,10 +72,7 @@ pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr> + Clone>(
     Ok(())
 }
 
-pub async fn add_address_with_ns<
-    T: Into<String> + Clone,
-    U: Into<Ipv4Addr> + Clone,
->(
+pub async fn add_address_with_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
     link_name: T,
     ip: U,
     prefix: u8,
@@ -89,13 +88,11 @@ pub async fn add_address_with_ns<
     let i = Arc::clone(&ip);
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
-        handle.block_on(async move {
-            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-                tokio::spawn(async move {
-                    let _ = add_address((*l).clone(),*i, prefix, &h).await;
-                });
-            }
-        })
+        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            handle.block_on(async move {
+                let _ = add_address((*l).clone(), *i, prefix, &h).await;
+            });
+        }
     });
 
     t.join().unwrap();
@@ -144,15 +141,12 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
     let l = Arc::clone(&link_name);
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
-        handle.block_on(async move {
-            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-                tokio::spawn(async move {
-                    debug!("link_name (set_link_up_with): {:?}", (*l).clone());
-                    let _ = set_link_up("lo", &h).await;
-                    let _ = set_link_up((*l).clone(), &h).await;
-                });
-            }
-        })
+        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            handle.block_on(async move {
+                let _ = set_link_up("lo", &h).await;
+                let _ = set_link_up((*l).clone(), &h).await;
+            });
+        }
     });
 
     t.join().unwrap();
