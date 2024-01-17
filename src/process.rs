@@ -1,10 +1,9 @@
 use std::{
     io,
-    process::Stdio,
+    process::{Stdio, Command},
 };
 
 use log::info;
-use tokio::process::Command;
 
 #[derive(Debug)]
 pub struct ProcessExecutor {
@@ -28,11 +27,7 @@ impl ProcessExecutor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
-        if let Some(id) = child.id() {
-            info!("spawned child process; id: {}", id);
-        } else {
-            info!("The process has been polled to completion.");
-        }
+        info!("spawned child process; id: {}", child.id());
         Ok(())
     }
 }
