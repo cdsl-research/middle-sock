@@ -1,8 +1,6 @@
 use std::{
     collections::HashMap,
-    error,
-    fs::File,
-    io,
+    error, io,
     net::Ipv4Addr,
     path::Path,
     thread::{self},
@@ -13,10 +11,9 @@ use network::{
     add_address, add_address_with_ns, add_ns, create_veth_pair, set_link_up, set_link_up_with_ns,
     set_veth_to_ns,
 };
-use nix::sched::{setns, CloneFlags};
 use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
-use rtnetlink::{Handle, NETNS_PATH};
+use rtnetlink::{Handle, NetworkNamespace, NETNS_PATH};
 
 mod route;
 
@@ -86,10 +83,10 @@ mod process;
 
 pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
-    let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
+    let ns_path = format!("{}{}", NETNS_PATH, netns_name.into());
 
     let t = thread::spawn(move || {
-        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+        if NetworkNamespace::unshare_processing(ns_path).is_ok() {
             if executor.run().is_err() {
                 panic!("panic on executor");
             }

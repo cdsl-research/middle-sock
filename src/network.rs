@@ -9,7 +9,6 @@ use std::{
 
 use futures::TryStreamExt;
 use log::{debug, info};
-use nix::sched::{setns, CloneFlags};
 use rtnetlink::{Error, Handle, NetworkNamespace, NETNS_PATH};
 use tokio::runtime::Handle as TokioHandle;
 
@@ -79,7 +78,7 @@ pub async fn add_address_with_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Cl
     handle: &Handle,
     ns_name: T,
 ) -> Result<(), Box<dyn error::Error>> {
-    let new_ns = File::open(format!("{}{}", NETNS_PATH, ns_name.into()))?;
+    let ns_path = format!("{}{}", NETNS_PATH, ns_name.into());
     let handle = Arc::new(handle.clone());
     let h = Arc::clone(&handle);
     let link_name: Arc<String> = Arc::new(link_name.clone().into());
@@ -89,7 +88,7 @@ pub async fn add_address_with_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Cl
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
         handle.block_on(async move {
-            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            if NetworkNamespace::unshare_processing(ns_path).is_ok() {
                 let _ = add_address((*l).clone(), *i, prefix, &h).await;
             }
         })
@@ -134,7 +133,7 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
     handle: &Handle,
     ns_name: T,
 ) -> Result<(), Box<dyn error::Error>> {
-    let new_ns = File::open(format!("{}{}", NETNS_PATH, ns_name.into()))?;
+    let ns_path = format!("{}{}", NETNS_PATH, ns_name.into());
     let handle = Arc::new(handle.clone());
     let h = Arc::clone(&handle);
     let link_name: Arc<String> = Arc::new(link_name.clone().into());
@@ -142,7 +141,7 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
         handle.block_on(async move {
-            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            if NetworkNamespace::unshare_processing(ns_path).is_ok() {
                 let _ = set_link_up("lo", &h).await;
                 let _ = set_link_up((*l).clone(), &h).await;
             }
