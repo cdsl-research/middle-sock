@@ -1,16 +1,9 @@
 use std::{
-    fs::File,
     io,
-    os::{
-        fd::AsFd,
-        unix::prelude::{BorrowedFd, OwnedFd},
-    },
     process::Stdio,
 };
 
 use log::info;
-use nix::sched::{setns, CloneFlags};
-use rtnetlink::{NETNS_PATH, SELF_NS_PATH};
 use tokio::process::Command;
 
 #[derive(Debug)]
@@ -42,20 +35,4 @@ impl ProcessExecutor {
         }
         Ok(())
     }
-}
-
-pub fn get_current_netns() -> io::Result<OwnedFd> {
-    let f = File::open(SELF_NS_PATH)?;
-    f.as_fd().try_clone_to_owned()
-}
-
-pub fn switch_netns<T: Into<String>>(netns_name: T) -> io::Result<()> {
-    let f = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
-    setns(f.as_fd(), CloneFlags::CLONE_NEWNET)?;
-    Ok(())
-}
-
-pub fn switch_netns_fd(fd: BorrowedFd) -> io::Result<()> {
-    setns(fd, CloneFlags::CLONE_NEWNET)?;
-    Ok(())
 }

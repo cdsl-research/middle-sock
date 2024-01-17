@@ -1,9 +1,10 @@
-use std::{collections::HashMap, error, io, net::Ipv4Addr, os::unix::prelude::AsFd, path::Path};
+use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File};
 
-use network::{add_address, add_ns, add_route, create_veth_pair, set_link_up, set_veth_to_ns};
-use process::{get_current_netns, switch_netns, switch_netns_fd, ProcessExecutor};
+use network::{add_address, add_ns, create_veth_pair, set_link_up, set_veth_to_ns};
+use nix::sched::{CloneFlags, setns};
+use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
-use rtnetlink::Handle;
+use rtnetlink::{Handle, SELF_NS_PATH, NETNS_PATH};
 
 mod route;
 
@@ -65,10 +66,11 @@ mod process;
 
 pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
-    let current_ns = get_current_netns()?;
-    switch_netns(netns_name)?;
+    let current_ns = File::open(SELF_NS_PATH)?;
+    let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
+    setns(new_ns, CloneFlags::CLONE_NEWNET)?;
     executor.run()?;
-    switch_netns_fd(current_ns.as_fd())?;
+    setns(current_ns, CloneFlags::CLONE_NEWNET)?;
     Ok(())
 }
 
