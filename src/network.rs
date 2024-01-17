@@ -60,11 +60,11 @@ pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr> + Clone>(
         .get()
         .match_name(link_name.clone().into())
         .execute();
-    while let Some(link) = links.try_next().await? {
+    if let Some(link) = links.try_next().await? {
         debug!("link (add_address): {:?}", link);
         handle
             .address()
-            .add(link.header.index, ip.clone().into(), prefix)
+            .add(link.header.index, ip.into(), prefix)
             .execute()
             .await?
     }
@@ -88,11 +88,11 @@ pub async fn add_address_with_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Cl
     let i = Arc::clone(&ip);
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
-        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-            handle.block_on(async move {
+        handle.block_on(async move {
+            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 let _ = add_address((*l).clone(), *i, prefix, &h).await;
-            });
-        }
+            }
+        })
     });
 
     t.join().unwrap();
@@ -122,7 +122,7 @@ pub async fn set_veth_to_ns<T: Into<String>>(
 
 pub async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
     let mut links = handle.link().get().match_name(link_name.into()).execute();
-    while let Some(link) = links.try_next().await? {
+    if let Some(link) = links.try_next().await? {
         debug!("link (set_link_up) {:?}", link);
         handle.link().set(link.header.index).up().execute().await?
     }
@@ -141,12 +141,12 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
     let l = Arc::clone(&link_name);
     let handle = TokioHandle::current();
     let t = thread::spawn(move || {
-        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-            handle.block_on(async move {
+        handle.block_on(async move {
+            if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 let _ = set_link_up("lo", &h).await;
                 let _ = set_link_up((*l).clone(), &h).await;
-            });
-        }
+            }
+        })
     });
 
     t.join().unwrap();
