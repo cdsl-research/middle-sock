@@ -45,7 +45,7 @@ pub async fn setup_ns<T: Into<String> + Clone, U: Into<Ipv4Addr> + Clone>(
     set_link_up(link_name_new.clone(), handle).await?;
     set_link_up(link_name_host.clone(), handle).await?;
     set_veth_to_ns(link_name_host.clone(), ns_name.clone(), handle).await?;
-    add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
+    // add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
 }
 
