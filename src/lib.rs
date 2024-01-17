@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File, thread};
+use std::{collections::HashMap, error, io, net::Ipv4Addr, path::Path, fs::File, thread, sync::Arc};
 
 use network::{add_address, add_ns, create_veth_pair, set_link_up, set_veth_to_ns};
 use nix::sched::{CloneFlags, setns};
@@ -64,13 +64,24 @@ fn mask_to_prefix(mask: Ipv4Addr) -> u8 {
 mod packet;
 mod process;
 
-pub fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
+pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T, handle: &Handle) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
+    let handle = Arc::new(handle.clone());
+    let h = Arc::clone(&handle);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
     thread::spawn(move || {
-        setns(new_ns, CloneFlags::CLONE_NEWNET)?;
-        executor.run()?;
-        Ok::<(), io::Error>(())
+        if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
+            tokio::spawn(async move {
+                let _ = set_link_up("lo", &h).await;
+            });
+            if executor.run().is_ok() {
+                loop {}
+            } else {
+                panic!("panic on executor");
+            };
+        } else {
+            panic!("panic on setns");
+        }
     });
     Ok(())
 }
