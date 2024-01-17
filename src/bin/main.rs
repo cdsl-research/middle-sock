@@ -4,6 +4,7 @@ use std::{
 };
 
 use clap::Parser;
+use log::debug;
 use middle_sock::{init_routeinfo_map, new_route, run_process, setup_ns, socket::Socket};
 use rtnetlink::new_connection;
 
@@ -43,6 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         IpAddr::V4(v) => v,
         IpAddr::V6(_) => todo!(),
     };
+
+    debug!("ip: {:?}", ip);
 
     for (k, v) in route_info.iter() {
         if !v.is_full() {

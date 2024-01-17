@@ -8,6 +8,7 @@ use std::{
     thread::{self},
 };
 
+use log::info;
 use network::{
     add_address, add_address_with_ns, add_ns, create_veth_pair, set_link_up, set_link_up_with_ns,
     set_veth_to_ns,
@@ -34,10 +35,10 @@ pub async fn setup_ns<'a, T: Into<String> + Clone + Send + 'a, U: Into<Ipv4Addr>
     link_name_host: T,
     ns_name: T,
     ip: U,
-    info: &RouteInfo,
+    route_info: &RouteInfo,
     handle: &Handle,
 ) -> Result<(), Box<dyn error::Error>> {
-    let prefix = mask_to_prefix(info.mask);
+    let prefix = mask_to_prefix(route_info.mask);
     let prefix_rpos = 32 - prefix;
     let ip_octets: [u8; 4] = ip.clone().into().octets();
     let ip_octets_3 = ip_octets[3];
@@ -64,6 +65,7 @@ pub async fn setup_ns<'a, T: Into<String> + Clone + Send + 'a, U: Into<Ipv4Addr>
     .await?;
     set_link_up(link_name_new.clone(), handle).await?;
     set_link_up_with_ns(link_name_host.clone(), handle, ns_name.clone()).await?;
+    info!("setup_ns done!");
     // add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
 }
@@ -88,11 +90,9 @@ pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::
 
     thread::spawn(move || {
         if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
-            if executor.run().is_ok() {
-                loop {}
-            } else {
+            if executor.run().is_err() {
                 panic!("panic on executor");
-            };
+            }
         } else {
             panic!("panic on setns");
         }

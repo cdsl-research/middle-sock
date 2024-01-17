@@ -6,7 +6,7 @@ use std::{
 };
 
 use futures::TryStreamExt;
-use log::info;
+use log::{info, debug};
 use nix::sched::{setns, CloneFlags};
 use rtnetlink::{Error, Handle, NetworkNamespace, NETNS_PATH};
 use tokio::runtime::Handle as TokioHandle;
@@ -71,7 +71,6 @@ pub async fn add_address<T: Into<String> + Clone, U: Into<IpAddr>>(
 }
 
 pub async fn add_address_with_ns<
-    'a,
     T: Into<String> + Clone,
     U: Into<Ipv4Addr> + Clone,
 >(
@@ -124,6 +123,7 @@ pub async fn set_veth_to_ns<T: Into<String>>(
 pub async fn set_link_up<T: Into<String>>(link_name: T, handle: &Handle) -> Result<(), Error> {
     let mut links = handle.link().get().match_name(link_name.into()).execute();
     if let Some(link) = links.try_next().await? {
+        debug!("link (set_link_up) {:#?}", link);
         handle.link().set(link.header.index).up().execute().await?
     } else {
         info!("skipped");
@@ -146,6 +146,7 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
         handle.block_on(async move {
             if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 tokio::spawn(async move {
+                    debug!("link_name (set_link_up_with): {:?}", (*l).clone());
                     let _ = set_link_up("lo", &h).await;
                     let _ = set_link_up((*l).clone(), &h).await;
                 });
