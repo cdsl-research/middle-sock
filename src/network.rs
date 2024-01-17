@@ -88,7 +88,7 @@ pub async fn add_address_with_ns<
     let ip: Arc<Ipv4Addr> = Arc::new(ip.clone().into());
     let i = Arc::clone(&ip);
     let handle = TokioHandle::current();
-    thread::spawn(move || {
+    let t = thread::spawn(move || {
         handle.block_on(async move {
             if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 tokio::spawn(async move {
@@ -97,6 +97,9 @@ pub async fn add_address_with_ns<
             }
         })
     });
+
+    t.join().unwrap();
+
     Ok(())
 }
 
@@ -142,7 +145,7 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
     let link_name: Arc<String> = Arc::new(link_name.clone().into());
     let l = Arc::clone(&link_name);
     let handle = TokioHandle::current();
-    thread::spawn(move || {
+    let t = thread::spawn(move || {
         handle.block_on(async move {
             if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
                 tokio::spawn(async move {
@@ -153,5 +156,8 @@ pub async fn set_link_up_with_ns<'a, T: Into<String> + Clone + Send + 'a>(
             }
         })
     });
+
+    t.join().unwrap();
+
     Ok(())
 }

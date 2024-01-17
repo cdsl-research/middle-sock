@@ -88,7 +88,7 @@ pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::
     let mut executor = ProcessExecutor::new(cmd);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
 
-    thread::spawn(move || {
+    let t = thread::spawn(move || {
         if setns(new_ns, CloneFlags::CLONE_NEWNET).is_ok() {
             if executor.run().is_err() {
                 panic!("panic on executor");
@@ -97,6 +97,9 @@ pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::
             panic!("panic on setns");
         }
     });
+
+    t.join().unwrap();
+    
     Ok(())
 }
 

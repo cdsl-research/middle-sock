@@ -49,7 +49,7 @@ impl Socket {
         let receiver_sock = Arc::clone(&self.receiver);
         let sender_sock = Arc::clone(&self.sender);
         if let Some(s) = &self.domain {
-            let domain_sock = Arc::clone(s);
+            let _domain_sock = Arc::clone(s);
             tokio::spawn(async move {
                 info!("spawning sender (unix domain sock)");
                 // sender process w/ unix domain sock
