@@ -67,12 +67,11 @@ mod process;
 pub fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
     let new_ns = File::open(format!("{}{}", NETNS_PATH, netns_name.into()))?;
-    let t = thread::spawn(move || {
+    thread::spawn(move || {
         setns(new_ns, CloneFlags::CLONE_NEWNET)?;
         executor.run()?;
         Ok::<(), io::Error>(())
     });
-    t.join().expect_err("could not join handle");
     Ok(())
 }
 
