@@ -1,5 +1,6 @@
 use dhcproto::v4::Message;
 
+#[derive(Debug)]
 pub struct DHCPMessage(Message);
 
 impl DHCPMessage {

@@ -53,25 +53,26 @@ impl Socket {
             tokio::spawn(async move {
                 info!("spawning sender (unix domain sock)");
                 // sender process w/ unix domain sock
-            })
-            .await?;
+            });
         } else {
             tokio::spawn(async move {
                 info!("spawning sender (udp)");
                 // sender process w/ udp
                 while let Some((msg, addr)) = rx.recv().await {
+                    debug!("(sender task) msg: {:?}, addr: {:?}", msg, addr);
                     if addr.ip().to_string() == runtime_ip {
                         let mut buf = Vec::new();
                         let mut e = Encoder::new(&mut buf);
                         let _ = msg.raw().encode(&mut e);
+                        info!("send to host...");
                         if let Err(_) = sender_sock.send_to(&buf, server_host).await {
                             warn!("could not send to server_host")
                         }
                     } else {
+                        info!("addr is not from runtime?");
                     }
                 }
-            })
-            .await?;
+            });
         }
         info!("spawning receiver");
         let mut buf = [0; 1024];
@@ -79,6 +80,8 @@ impl Socket {
             let (len, addr) = receiver_sock.recv_from(&mut buf).await?;
             let msg = Message::decode(&mut Decoder::new(&buf[..len]));
             if let Ok(msg) = msg {
+                info!("DHCP Message received!");
+                debug!("msg: {:?}", msg);
                 if let Err(_) = tx.send((msg.into(), addr)).await {
                     warn!("failed sending");
                 }
