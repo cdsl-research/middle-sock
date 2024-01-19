@@ -1,12 +1,10 @@
 use std::{
-    env,
+    env, error, io,
     net::{IpAddr, SocketAddr},
 };
 
 use clap::Parser;
-use log::debug;
 use middle_sock::{init_routeinfo_map, new_route, run_process, setup_ns, socket::Socket};
-use rtnetlink::new_connection;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -14,8 +12,7 @@ struct Cli {
     command: String,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn error::Error>> {
     env_logger::init();
     let server_host = env::var("SERVER_HOST")
         .expect("no data in `SERVER_HOST`")
@@ -33,10 +30,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r.parse_network(&mut route_info)?;
     }
 
-    let (connection, handle, _) = new_connection()?;
-
-    tokio::spawn(connection);
-
     let ns_name = "dhcp";
     let link_name = "veth0";
 
@@ -45,20 +38,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         IpAddr::V6(_) => todo!(),
     };
 
-    debug!("ip: {:?}", ip);
-
     for (k, v) in route_info.iter() {
         if !v.is_full() {
             continue;
         }
-        setup_ns(link_name, k, ns_name, ip, v, &handle).await?
+        setup_ns(link_name, k, ns_name, ip, v)?
     }
 
     let cmd = cli.command;
 
-    run_process(cmd, ns_name.to_string()).await?;
+    run_process(cmd, ns_name.to_string())?;
 
-    let sock = Socket::new_without_domain().await?;
-    sock.listen(server_host).await?;
+    let main_rt = tokio::runtime::Runtime::new()?;
+    main_rt.block_on(async {
+        let sock = Socket::new_without_domain().await?;
+        sock.listen(server_host).await?;
+        Ok::<(), io::Error>(())
+    })?;
     Ok(())
 }

@@ -1,10 +1,4 @@
-use std::{
-    collections::HashMap,
-    error, io,
-    net::Ipv4Addr,
-    path::Path,
-    thread::{self},
-};
+use std::{collections::HashMap, io, net::Ipv4Addr, path::Path};
 
 use log::info;
 use network::{
@@ -13,7 +7,6 @@ use network::{
 };
 use process::ProcessExecutor;
 use route::{Route, RouteInfo, SEG_1, SEG_2, SEG_3, SEG_4};
-use rtnetlink::{Handle, NetworkNamespace, NETNS_PATH};
 
 mod route;
 
@@ -27,41 +20,43 @@ pub fn init_routeinfo_map() -> HashMap<String, RouteInfo> {
 
 mod network;
 
-pub async fn setup_ns<'a, T: Into<String> + Clone + Send + 'a, U: Into<Ipv4Addr> + Clone + Send>(
+pub fn setup_ns<
+    T: Into<String> + Clone + std::panic::UnwindSafe,
+    U: Into<Ipv4Addr> + Clone + std::panic::UnwindSafe,
+>(
     link_name_new: T,
     link_name_host: T,
     ns_name: T,
     ip: U,
     route_info: &RouteInfo,
-    handle: &Handle,
-) -> Result<(), Box<dyn error::Error>> {
+) -> io::Result<()> {
     let prefix = mask_to_prefix(route_info.mask);
     let prefix_rpos = 32 - prefix;
     let ip_octets: [u8; 4] = ip.clone().into().octets();
-    let ip_octets_3 = ip_octets[3];
-    let ip_to_u64: u64 =
-        (ip_octets[0] << 24 + ip_octets[1] << 16 + ip_octets[2] << 8 + ip_octets[3]) as u64;
-    let ip_range_fixed: u64 = (ip_to_u64 << prefix_rpos) >> prefix_rpos + ip_octets_3;
+    let ip_octet_0 = u64::from(ip_octets[0]);
+    let ip_octet_1 = u64::from(ip_octets[1]);
+    let ip_octet_2 = u64::from(ip_octets[2]);
+    let ip_octet_3 = u64::from(ip_octets[3]);
+    let ip_to_u64 = (ip_octet_0 << 24) + (ip_octet_1 << 16) + (ip_octet_2 << 8) + ip_octet_3;
+    let ip_range_fixed: u64 = (ip_to_u64 & (0xFFFFFFFF << prefix_rpos)) + 1;
     let peer_ip = Ipv4Addr::new(
         ((ip_range_fixed & SEG_1) >> 24) as u8,
         ((ip_range_fixed & SEG_2) >> 16) as u8,
         ((ip_range_fixed & SEG_3) >> 8) as u8,
         (ip_range_fixed & SEG_4) as u8,
     );
-    add_ns(ns_name.clone()).await?;
-    create_veth_pair(link_name_new.clone(), link_name_host.clone(), handle).await?;
-    set_veth_to_ns(link_name_host.clone(), ns_name.clone(), handle).await?;
-    add_address(link_name_new.clone(), peer_ip, prefix, handle).await?;
+    add_ns(ns_name.clone())?;
+    create_veth_pair(link_name_new.clone(), link_name_host.clone())?;
+    set_veth_to_ns(link_name_host.clone(), ns_name.clone())?;
+    add_address(link_name_new.clone(), peer_ip, prefix)?;
     add_address_with_ns(
         link_name_host.clone(),
         ip.clone().into(),
         prefix,
-        handle,
         ns_name.clone(),
-    )
-    .await?;
-    set_link_up(link_name_new.clone(), handle).await?;
-    set_link_up_with_ns(link_name_host.clone(), handle, ns_name.clone()).await?;
+    )?;
+    set_link_up(link_name_new.clone())?;
+    set_link_up_with_ns(link_name_host.clone(), ns_name.clone())?;
     info!("setup_ns done!");
     // add_route(ip.clone().into(), prefix, info.gateway, handle).await?;
     Ok(())
@@ -81,21 +76,14 @@ fn mask_to_prefix(mask: Ipv4Addr) -> u8 {
 mod packet;
 mod process;
 
-pub async fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
+pub fn run_process<T: Into<String> + Clone>(cmd: T, netns_name: T) -> io::Result<()> {
     let mut executor = ProcessExecutor::new(cmd);
-    let ns_path = format!("{}{}", NETNS_PATH, netns_name.into());
 
-    let t = thread::spawn(move || {
-        if NetworkNamespace::unshare_processing(ns_path).is_ok() {
-            if executor.run().is_err() {
-                panic!("panic on executor");
-            }
-        } else {
-            panic!("panic on setns");
-        }
-    });
+    info!("run_process");
 
-    t.join().unwrap();
+    if executor.run(netns_name).is_err() {
+        panic!("panic on executor");
+    }
 
     Ok(())
 }
